@@ -113,7 +113,7 @@ end
 	return nonterminals
 end
 
-local StochasticGrammar = o.lazyClass(Grammar)
+local StochasticGrammar = o.class(Grammar)
 lang.StochasticGrammar = StochasticGrammar
 
 function StochasticGrammar.__init(rules)
@@ -129,7 +129,7 @@ end
 
 local LookupTreeMT = {}
 local LookupTree = o.class(LookupTreeMT)
-function LookUpTreeMT:__index(key)
+function LookupTreeMT:__index(key)
 	-- use "value" a special value that will *not* be affected by this
 	-- metamethod.
 	if key == "value" then
