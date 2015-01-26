@@ -50,8 +50,7 @@ local turtleGrammar =  lang.StochasticGrammar(
 	lang.Rule({"E","N"}, {"N", "E"}, .5),
 	lang.Rule({"W","S"}, {"S", "W"}, .5),
 	lang.Rule({"W","E"}, {"E", "W"}, .5),
-	lang.Rule({"W","N"}, {"N", "W"}, .5),
-	lang.Rule({"MOVE"}, {"E","MOVE", "W"}, .5)})
+	lang.Rule({"W","N"}, {"N", "W"}, .5)})
 local turtle = Lsystem( turtleGrammar, {"MOVE"})
 for _,rule in pairs(turtleGrammar) do
 	print(rule)

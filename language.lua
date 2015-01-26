@@ -139,12 +139,14 @@ end
 function Bucket:apply(sentence, i)
 	--randomly pick a rule to apply
 	local r = math.random()
+	local sum = 0
 	for _, rule in ipairs(self) do
-		print("P:", rule, rule.probability, r)
-		if (rule.probability or 0) <= r then
+		--print("P:", rule, rule.probability, r)
+		if r <= sum + (rule.probability or 0) then
+			print("apply:", rule)
 			return rule:apply(sentence, i)
 		else
-			r = r + (rule.probability or 0)
+			sum = sum + (rule.probability or 0)
 		end
 	end
 	print(r)
