@@ -8,6 +8,7 @@
 -- Grammar is [Rule]
 
 local o = require("object")
+local types = require("types") -- some generic data structures
 
 local lang = {} -- module table
 
@@ -127,50 +128,6 @@ function StochasticGrammar:getbuckets()
 	return buckets
 end
 
---local LookupTreeMT = {}
---local LookupTree = o.class(LookupTreeMT)
-
---function LookupTreeMT:__index(key)
-local LookupTree
-function getEmptyTree(self, key, private)
-	-- use "value" a special value that will *not* be affected by this
-	-- function
-	if key == "value" then
-		return nil
-	else
-	-- put a new tree into this blank index
-	local tree = LookupTree()
-	self[key] = LookupTree()
-	return tree
-	end
-end
-
-LookupTree = o.class(nil, getEmptyTree)
--- empty constructor avoids infinite loops when the getter makes a new tree,
--- attempting to find "__init". if there is no "__init" in the class then the
--- getter will attempt to find "__init" in the object, causing a recusive
--- loop.
-function LookupTree:__init()
-end
-
-function LookupTree:get(list, n)
-	n = n or 1
-	if n > #list then
-		print("End:", self.value)
-		return self.value
-	else
-		self[ list[n] ]:get(list, n+1)
-	end
-end
-function LookupTree:set(list, value, n)
-	n = n or 1
-	if n > #list then
-		self.value = value
-	else
-		self[list[n]]:set(list, value, n+1 )
-	end
-end
-
 --function normalize( [Rule])
 -- normalizes the probabilities of all of the rules to add up to 100%. 
 local function normalizeRules(rules)
@@ -187,7 +144,7 @@ end
 
 function StochasticGrammar:bucketize()
 	local buckets = {}
-	local testTree = LookupTree()
+	local testTree = types.LookupTree()
 	local n = 1
 	for _, rule in pairs(self.rules) do
 		local val = testTree:get(rule.predecessor)
@@ -210,10 +167,11 @@ end
 
 -- some tests
 --
-lt = LookupTree()
-print(":", lt:get({"a", "b", "c"}))
+lt = types.LookupTree()
 print(":", lt:get({"a", "b", "c"}))
 lt:set({"a", "b", "c"}, "HOORAY!")
+print(":", lt:get({"a", "b", "c"}))
+lt:set({"a", "b", "c"}, "Hoorah!")
 print(":", lt:get({"a", "b", "c"}))
 
 return lang -- return the module

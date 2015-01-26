@@ -26,14 +26,23 @@ function Lsystem:step()
 end
 
 -- test data
-local fib = Lsystem( lang.Grammar(
+local fibGrammar = lang.Grammar(
 	{ lang.Rule({"a"},{"b"}),
-	lang.Rule({"b"},{"a","b"})} ), {"a"})
+	lang.Rule({"b"},{"a","b"})} )
+local fib = Lsystem( fibGrammar, {"a"})
 
-local turtle = Lsystem( lang.Grammar(
+for _,rule in pairs(fibGrammar) do
+	print(rule)
+end
+
+
+local turtleGrammar =  lang.Grammar(
 	{ lang.Rule({"MOVE"}, {"N","MOVE", "S"}),
-	lang.Rule({"MOVE"}, {"E","MOVE", "W"})}
-), {"MOVE"})
+	lang.Rule({"MOVE"}, {"E","MOVE", "W"})})
+local turtle = Lsystem( turtleGrammar, {"MOVE"})
+for _,rule in pairs(turtleGrammar) do
+	print(rule)
+end
 
 local function exit()
 	line = io.read("*l")

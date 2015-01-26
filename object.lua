@@ -1,7 +1,7 @@
 local Object = {}
 -- generic getter/setters
 -- all blank indexes are looked up with a "get"..key function in self
-function Object.autoGet(self, private, key)
+function Object.autoGet(self, key, private)
 	local class = self.objType
 	local str = "get" .. key
 	if rawget(self, str) then
@@ -12,7 +12,7 @@ function Object.autoGet(self, private, key)
 	end
 end
 -- all new indexes are made in a private table
-function Object.privateSet(self, private, key, value)
+function Object.privateSet(self, key, value, private)
 	private[key] = value
 end
 
@@ -29,6 +29,7 @@ function Object.class( parent ,getter, setter)
 		class.super = parent
 		classMt.__index = parent
 	else
+		class.super = class
 		classMt.__index = nil
 	end
 	class.objType = class
@@ -36,7 +37,7 @@ function Object.class( parent ,getter, setter)
 	local private = {} -- private table that will be closed over in the __newindex and __index function, and not available elsewhere
 	if setter then
 		objMt.__newindex = function(self, key, value)
-			setter(self, private, key, value)
+			setter(self, key, value, private)
 		end
 	end
 
@@ -44,7 +45,7 @@ function Object.class( parent ,getter, setter)
 		objMt.__index = function(self, key)
 			local val = class[key]
 			if not val then
-				val = getter( self, class, private, key )
+				val = getter( self, key, private )
 			end
 			return val
 		end
@@ -56,7 +57,6 @@ function Object.class( parent ,getter, setter)
 	function classMt.__call(class,...)
 		local self = {}
 		setmetatable(self, objMt)
-		self.super = class
 		if self.__init then self.__init(self,...) end
 		return self
 	end
