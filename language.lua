@@ -113,40 +113,53 @@ end
 	return nonterminals
 end
 
-local StochasticGrammar = o.class(Grammar)
+local StochasticGrammar = o.class(Grammar, o.autoGetter)
 lang.StochasticGrammar = StochasticGrammar
 
 function StochasticGrammar.__init(rules)
-	self:super(rules)
+	self.super(self,rules) -- don't use ':' notation, as super is *not* a function, its a table with a __call metamethod
 	self:normalize()
 end
 
-function StochasticGrammar:lazyBuckets(self)
+function StochasticGrammar:getbuckets()
 	buckets = self:bucketize()
 	self.buckets = buckets
 	return buckets
 end
 
-local LookupTreeMT = {}
-local LookupTree = o.class(LookupTreeMT)
-function LookupTreeMT:__index(key)
+--local LookupTreeMT = {}
+--local LookupTree = o.class(LookupTreeMT)
+
+--function LookupTreeMT:__index(key)
+local LookupTree
+function getEmptyTree(self, key, private)
 	-- use "value" a special value that will *not* be affected by this
-	-- metamethod.
+	-- function
 	if key == "value" then
 		return nil
 	else
 	-- put a new tree into this blank index
+	local tree = LookupTree()
 	self[key] = LookupTree()
-	return self[key]
+	return tree
 	end
+end
+
+LookupTree = o.class(nil, getEmptyTree)
+-- empty constructor avoids infinite loops when the getter makes a new tree,
+-- attempting to find "__init". if there is no "__init" in the class then the
+-- getter will attempt to find "__init" in the object, causing a recusive
+-- loop.
+function LookupTree:__init()
 end
 
 function LookupTree:get(list, n)
 	n = n or 1
 	if n > #list then
+		print("End:", self.value)
 		return self.value
 	else
-		self[list[n]]:get(list, (n) + 1)
+		self[ list[n] ]:get(list, n+1)
 	end
 end
 function LookupTree:set(list, value, n)
@@ -154,7 +167,7 @@ function LookupTree:set(list, value, n)
 	if n > #list then
 		self.value = value
 	else
-		self[list[n]]:set(list, (n) + 1, value)
+		self[list[n]]:set(list, value, n+1 )
 	end
 end
 
@@ -194,5 +207,13 @@ function StochasticGrammar:normalize()
 		normalizeRules(bucket)
 	end
 end
+
+-- some tests
+--
+lt = LookupTree()
+print(":", lt:get({"a", "b", "c"}))
+print(":", lt:get({"a", "b", "c"}))
+lt:set({"a", "b", "c"}, "HOORAY!")
+print(":", lt:get({"a", "b", "c"}))
 
 return lang -- return the module

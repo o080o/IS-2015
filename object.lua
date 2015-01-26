@@ -1,6 +1,23 @@
 local Object = {}
+-- generic getter/setters
+-- all blank indexes are looked up with a "get"..key function in self
+function Object.autoGet(self, private, key)
+	local class = self.objType
+	local str = "get" .. key
+	if rawget(self, str) then
+		return self[str](private)
+	end
+	if class[str] then
+		return class[str](private)
+	end
+end
+-- all new indexes are made in a private table
+function Object.privateSet(self, private, key, value)
+	private[key] = value
+end
+
 --function Object.class( parent )
-function Object.class( parent )
+function Object.class( parent ,getter, setter)
 	local class = {}
 	local objMt = class
 	local classMt = {}
@@ -14,12 +31,32 @@ function Object.class( parent )
 	else
 		classMt.__index = nil
 	end
-	objMt.__index = class
+	class.objType = class
+
+	local private = {} -- private table that will be closed over in the __newindex and __index function, and not available elsewhere
+	if setter then
+		objMt.__newindex = function(self, key, value)
+			setter(self, private, key, value)
+		end
+	end
+
+	if getter then
+		objMt.__index = function(self, key)
+			local val = class[key]
+			if not val then
+				val = getter( self, class, private, key )
+			end
+			return val
+		end
+	else
+		objMt.__index = class
+	end
 
 
 	function classMt.__call(class,...)
 		local self = {}
 		setmetatable(self, objMt)
+		self.super = class
 		if self.__init then self.__init(self,...) end
 		return self
 	end
@@ -33,10 +70,6 @@ function Object.clone(self)
 		clone[k] = v
 	end
 	return setmetatable(clone, getmetatable(self))
-end
-
-function Object.typeOf(obj)
-	return getmetatable(obj).__index
 end
 
 return Object
