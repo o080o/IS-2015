@@ -36,9 +36,22 @@ for _,rule in pairs(fibGrammar) do
 end
 
 
-local turtleGrammar =  lang.Grammar(
-	{ lang.Rule({"MOVE"}, {"N","MOVE", "S"}),
-	lang.Rule({"MOVE"}, {"E","MOVE", "W"})})
+local turtleGrammar =  lang.StochasticGrammar(
+	{ lang.Rule({"MOVE"}, {"N","MOVE", "S"}, .5),
+	lang.Rule({"MOVE"}, {"E","MOVE", "W"}, .5),
+	lang.Rule({"N","E"}, {"E", "N"}, .5),
+	lang.Rule({"N","W"}, {"W", "N"}, .5),
+	lang.Rule({"N","S"}, {"S", "N"}, .5),
+	lang.Rule({"S","E"}, {"E", "S"}, .5),
+	lang.Rule({"S","W"}, {"W", "S"}, .5),
+	lang.Rule({"S","N"}, {"N", "S"}, .5),
+	lang.Rule({"E","S"}, {"S", "E"}, .5),
+	lang.Rule({"E","W"}, {"W", "E"}, .5),
+	lang.Rule({"E","N"}, {"N", "E"}, .5),
+	lang.Rule({"W","S"}, {"S", "W"}, .5),
+	lang.Rule({"W","E"}, {"E", "W"}, .5),
+	lang.Rule({"W","N"}, {"N", "W"}, .5),
+	lang.Rule({"MOVE"}, {"E","MOVE", "W"}, .5)})
 local turtle = Lsystem( turtleGrammar, {"MOVE"})
 for _,rule in pairs(turtleGrammar) do
 	print(rule)

@@ -46,11 +46,12 @@ local Rule = o.class()
 lang.Rule = Rule --export the Rule object in the module
 
 -- constructor Rule( [Symbol] predecessor, [Symbol] successor)
-function Rule:__init(predecessor, successor)
+function Rule:__init(predecessor, successor, probability)
 	assert(predecessor, "Rule constructor: No predecessor given")
 	assert(successor, "Rule constructor: No sucessor given")
 	self.predecessor = predecessor 
 	self.successor = successor
+	self.probability = probability -- may be nil for deterministic grammars
 	self[1] = self.predecessor
 	self[2] = self.successor
 end
@@ -94,6 +95,7 @@ function Rule:apply(s, pos)
 	end
 end
 
+
 local Grammar = o.class()
 lang.Grammar = Grammar
 
@@ -114,54 +116,82 @@ end
 	return nonterminals
 end
 
-local StochasticGrammar = o.class(Grammar, o.autoGetter)
+--local StochasticGrammar = o.class(Grammar, o.autoGetter)
+-- data StochasticGrammar = [Bucket]
+local StochasticGrammar = o.class(Grammar)
 lang.StochasticGrammar = StochasticGrammar
 
-function StochasticGrammar.__init(rules)
-	self.super(self,rules) -- don't use ':' notation, as super is *not* a function, its a table with a __call metamethod
+function StochasticGrammar:__init(rules)
+	buckets = self:bucketize(rules)
+	for _,bucket in pairs(buckets) do
+		table.insert(self, bucket)
+	end
 	self:normalize()
 end
 
-function StochasticGrammar:getbuckets()
-	buckets = self:bucketize()
-	self.buckets = buckets
-	return buckets
+--data Bucket = [Rule]
+local Bucket = o.class()
+function Bucket:__init(...)
+	for _,rule in pairs( {...} ) do
+		table.insert(self, rule)
+	end
 end
-
---function normalize( [Rule])
+function Bucket:apply(sentence, i)
+	--randomly pick a rule to apply
+	local r = math.random()
+	for _, rule in ipairs(self) do
+		print("P:", rule, rule.probability, r)
+		if (rule.probability or 0) <= r then
+			return rule:apply(sentence, i)
+		else
+			r = r + (rule.probability or 0)
+		end
+	end
+	print(r)
+	error("no rule tested in Bucket:applyRule()")
+	return sentence, i
+end
+--function normalize( Bucket )
 -- normalizes the probabilities of all of the rules to add up to 100%. 
-local function normalizeRules(rules)
+function Bucket:normalize()
 	-- find the sum...
-	for _,rule in pairs(rules) do
+	local sum = 0
+	for _,rule in ipairs(self) do
 		sum = sum + (rule.probability or 0)
 	end
 	factor = 1/sum -- factor to scale each probability
-	for _,rule in pairs(rules) do
+	for _,rule in ipairs(self) do
 		if rule.probability then rule.probability = rule.probability * factor 
 		else rule.probability = 0 end
 	end
 end
 
-function StochasticGrammar:bucketize()
+--function StochasticGrammar:bucketize()
+--groups all the individual rules in to buckets, where all the rules in a
+--bucket have the same predecessor
+--return [Bucket] a list of all the "buckets" in the grammar
+function StochasticGrammar:bucketize(rules)
 	local buckets = {}
 	local testTree = types.LookupTree()
 	local n = 1
-	for _, rule in pairs(self.rules) do
+	for _, rule in pairs(rules) do
 		local val = testTree:get(rule.predecessor)
 		if val then
-			table.insert( bucket[val], rule)
+			table.insert( buckets[val], rule)
 		else
 			local key = n
 			n = n + 1 -- by using increasing integer keys, we will end up with a list of lists! == [[Rule]]
 			testTree:set(rule.predecessor, key) -- put a unique table into the lookup tree, which will be used as a key into the the buckets table later
-			buckets[key] = {rule}
+			buckets[key] = Bucket(rule)
 		end
 	end
+	return buckets
 end
+-- normalize the probability of each bucket in the grammar
 function StochasticGrammar:normalize()
 	-- step 1. make a list for each unique predecessor, then normalize each
-	for _, bucket in pairs(self.buckets) do
-		normalizeRules(bucket)
+	for _, bucket in pairs(self) do
+		bucket:normalize()
 	end
 end
 
