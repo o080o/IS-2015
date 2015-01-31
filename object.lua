@@ -22,6 +22,7 @@ function Object.class( parent ,getter, setter)
 	local objMt = class
 	local classMt = {}
 	if parent then
+		-- copy for some performance increase
 		for k,v in pairs(parent) do
 			print("Copy:", k, v)
 			objMt[k] = v

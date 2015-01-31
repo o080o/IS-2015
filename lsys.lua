@@ -9,9 +9,12 @@ function Lsystem:__init(grammar, axiom)
 	self.axiom = axiom
 end
 
-function Lsystem:step()
+function Lsystem:step(n)
 	-- parse from left to right looking for a matching rule
 	--for i = 1,# sentence do
+	n = n or 1
+	if n <= 1 then return self.sentence end
+
 	sentence = self.sentence
 	local i = 1
 	while i<=#sentence do -- allow us to continue looping while we add entries into the sentence table, instead of pairs() or for i... loops
@@ -23,56 +26,8 @@ function Lsystem:step()
 		end
 		i=i+1
 	end
+	self.sentence = sentence -- should not be necessary as rule:apply modifies sentence in place
+	return self:step(n-1)
 end
-
--- test data
-local fibGrammar = lang.Grammar(
-	{ lang.Rule({"a"},{"b"}),
-	lang.Rule({"b"},{"a","b"})} )
-local fib = Lsystem( fibGrammar, {"a"})
-
-for _,rule in pairs(fibGrammar) do
-	print(rule)
-end
-
-
-local turtleGrammar =  lang.StochasticGrammar(
-	{ lang.Rule({"MOVE"}, {"N","MOVE", "S"}, .5),
-	lang.Rule({"MOVE"}, {"E","MOVE", "W"}, .5),
-	lang.Rule({"N","E"}, {"E", "N"}, .5),
-	lang.Rule({"N","W"}, {"W", "N"}, .5),
-	lang.Rule({"N","S"}, {"S", "N"}, .5),
-	lang.Rule({"S","E"}, {"E", "S"}, .5),
-	lang.Rule({"S","W"}, {"W", "S"}, .5),
-	lang.Rule({"S","N"}, {"N", "S"}, .5),
-	lang.Rule({"E","S"}, {"S", "E"}, .5),
-	lang.Rule({"E","W"}, {"W", "E"}, .5),
-	lang.Rule({"E","N"}, {"N", "E"}, .5),
-	lang.Rule({"W","S"}, {"S", "W"}, .5),
-	lang.Rule({"W","E"}, {"E", "W"}, .5),
-	lang.Rule({"W","N"}, {"N", "W"}, .5)})
-local turtle = Lsystem( turtleGrammar, {"MOVE"})
-for _,rule in pairs(turtleGrammar) do
-	print(rule)
-end
-
-local function exit()
-	line = io.read("*l")
-	return line == "q"
-end
-local function testSys(lsys)
-print(lsys.axiom)
-	while true do
-		lsys:step()
-		print(lsys.sentence)
-		if  exit() then break end
-	end
-end
-
-testSys(fib)
-testSys(turtle)
-
-
-	
 
 return Lsystem -- return functions as a module

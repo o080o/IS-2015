@@ -21,6 +21,14 @@ function Sentence:__init(symbols)
 		self[k] = s
 	end
 end
+-- function Sentence:read( {Function (Int, Symbol)} alphabet )
+-- read through the sentence, for each symbol calling the associated function
+-- in the alphabet table
+function Sentence:read(alphabet)
+	for i,sym in ipairs(self) do
+		if alphabet[sym] then alphabet[sym](i, sym) end
+	end
+end
 -- function Sentence:__tostring()
 -- return String the entire sentence with a space between each symbol
 function Sentence:__tostring()
@@ -142,9 +150,7 @@ function Bucket:apply(sentence, i)
 	local r = math.random()
 	local sum = 0
 	for _, rule in ipairs(self) do
-		--print("P:", rule, rule.probability, r)
 		if r <= sum + (rule.probability or 0) then
-			print("bucket apply:", rule, rule.probability, r, sum)
 			return rule:apply(sentence, i)
 		else
 			sum = sum + (rule.probability or 0)
@@ -196,14 +202,5 @@ function StochasticGrammar:normalize()
 		bucket:normalize()
 	end
 end
-
--- some tests
---
-lt = types.LookupTree()
-print(":", lt:get({"a", "b", "c"}))
-lt:set({"a", "b", "c"}, "HOORAY!")
-print(":", lt:get({"a", "b", "c"}))
-lt:set({"a", "b", "c"}, "Hoorah!")
-print(":", lt:get({"a", "b", "c"}))
 
 return lang -- return the module
