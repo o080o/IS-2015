@@ -85,6 +85,7 @@ function Rule:apply(s, pos)
 			match = false
 			break
 		end
+		i = i + 1
 	end
 	if match then
 		for n=1,#self.predecessor do table.remove(s, pos) end -- remove the predecessor from the sentence
@@ -143,15 +144,13 @@ function Bucket:apply(sentence, i)
 	for _, rule in ipairs(self) do
 		--print("P:", rule, rule.probability, r)
 		if r <= sum + (rule.probability or 0) then
-			print("apply:", rule)
+			print("bucket apply:", rule, rule.probability, r, sum)
 			return rule:apply(sentence, i)
 		else
 			sum = sum + (rule.probability or 0)
 		end
 	end
-	print(r)
-	error("no rule tested in Bucket:applyRule()")
-	return sentence, i
+	return false, i, sentence
 end
 --function normalize( Bucket )
 -- normalizes the probabilities of all of the rules to add up to 100%. 
@@ -162,6 +161,7 @@ function Bucket:normalize()
 		sum = sum + (rule.probability or 0)
 	end
 	factor = 1/sum -- factor to scale each probability
+	if factor > 1 then factor = 1 end
 	for _,rule in ipairs(self) do
 		if rule.probability then rule.probability = rule.probability * factor 
 		else rule.probability = 0 end
