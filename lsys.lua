@@ -13,20 +13,32 @@ function Lsystem:step(n)
 	-- parse from left to right looking for a matching rule
 	--for i = 1,# sentence do
 	n = n or 1
-	if n <= 1 then return self.sentence end
+	if n < 1 then return self.sentence end
 
-	sentence = self.sentence
+	local sentence = self.sentence
+	local newSentence = lang.Sentence()
 	local i = 1
-	while i<=#sentence do -- allow us to continue looping while we add entries into the sentence table, instead of pairs() or for i... loops
+	while i<=#sentence do -- allow us to skip over replaced symbols by adjusting i
 		local sym  = sentence[i]
+		local matched = false
 		for _,rule in pairs(self.grammar) do
 			-- test if this rule could be applied here. returns nil if not.
-			applied, i, sentence = rule:apply(sentence, i)
-			if applied then break end -- only apply one rule for a certain position
+			local applicable, n, successor = rule:apply(sentence, i)
+			if applicable then
+				matched = true
+				i = i + n 
+				for _, s in ipairs(successor) do
+					table.insert( newSentence, s)
+				end
+				break -- only apply one rule for a certain position
+			end
 		end
-		i=i+1
+		if not matched then -- apply the identity rule instead
+			table.insert(newSentence, sym)
+			i=i+1
+		end
 	end
-	self.sentence = sentence -- should not be necessary as rule:apply modifies sentence in place
+	self.sentence = newSentence
 	print(self.sentence)
 	return self:step(n-1)
 end

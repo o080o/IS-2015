@@ -28,6 +28,7 @@ lang.Sentence = Sentence -- export this object in the module
 
 --constructor Sentence( [Symbol] symbols )
 function Sentence:__init(symbols)
+	symbols = symbols or {}
 	for k,s in ipairs(symbols) do
 		self[k] = s
 	end
@@ -67,7 +68,7 @@ lang.Rule = Rule --export the Rule object in the module
 -- constructor Rule( [Symbol] predecessor, [Symbol] successor)
 function Rule:__init(predecessor, successor, probability)
 	assert(predecessor, "Rule constructor: No predecessor given")
-	assert(successor, "Rule constructor: No sucessor given")
+	assert(successor, "Rule constructor: No successor given")
 	self.predecessor = predecessor 
 	self.successor = successor
 	self.probability = probability -- may be nil for deterministic grammars
@@ -77,10 +78,8 @@ end
 --function Rule:__tostring()
 function Rule:__tostring()
 	local s = {}
-	for _,sym in pairs(self.predecessor) do
-		table.insert(s, tostring(sym))
-		table.insert(s, " ")
-	end
+	table.insert(s, tostring(self.predecessor))
+	table.insert(s, " ")
 	table.insert(s, "-> ")
 	for _,sym in pairs(self.successor) do
 		table.insert(s, tostring(sym))
@@ -96,6 +95,36 @@ end
 --		Int new_pos - the position in the new sentence of the last symbol added by the rule, or *pos* if the rule was not applied
 -- 		Sentence new_s -  the new sentence, or *s* if the rule was not applied
 function Rule:apply(s, pos)
+	if s[pos] == self.predecessor then
+		--table.remove(s, pos)
+		--for n=#self.successor, 1, -1 do table.insert(s, pos, self.successor[n]) end
+		return true, 1, self.successor
+	else
+		return false, 0, nil
+	end
+end
+
+CSRule = o.class(Rule)
+lang.CSRule = CSRule
+function CSRule:__init(predecessor, successor, probability)
+	self.predecessor = predecessor
+	self.successor = successor
+	self.probability = probability
+end
+function CSRule:__tostring()
+	local s = {}
+	for _,sym in pairs(self.predecessor) do
+		table.insert(s, tostring(sym))
+		table.insert(s, " ")
+	end
+	table.insert(s, "-> ")
+	for _,sym in pairs(self.successor) do
+		table.insert(s, tostring(sym))
+		table.insert(s, " ")
+	end
+	return table.concat(s)
+end
+function CSRule:apply(s, pos)
 	-- test if this rule can be applied
 	local match = true
 	local i = pos
@@ -107,11 +136,9 @@ function Rule:apply(s, pos)
 		i = i + 1
 	end
 	if match then
-		for n=1,#self.predecessor do table.remove(s, pos) end -- remove the predecessor from the sentence
-		for n=#self.successor, 1, -1 do table.insert(s, pos, self.successor[n]) end -- insert the successor into the sentence
-		return true, pos + #self.successor - 1, s
+		return true, #self.successor, self.successor
 	else
-		return false, pos, s
+		return false, 0, nil
 	end
 end
 
