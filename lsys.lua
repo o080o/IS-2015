@@ -39,7 +39,6 @@ function Lsystem:step(n)
 		end
 	end
 	self.sentence = newSentence
-	print(self.sentence)
 	return self:step(n-1)
 end
 
