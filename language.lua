@@ -12,6 +12,17 @@ local types = require("types") -- some generic data structures
 
 local lang = {} -- module table
 
+-- function lang.string( String ) return [String] a list of characters in the
+-- string. Useful to convert a string into a list of symbols to create
+-- grammars, sentences, etc.
+function lang.string( str )
+	list = {}
+	for c in str:gmatch(".") do
+		table.insert( list, c )
+	end
+	return list
+end
+
 local Sentence = o.class()
 lang.Sentence = Sentence -- export this object in the module
 
@@ -26,7 +37,7 @@ end
 -- in the alphabet table
 function Sentence:read(alphabet)
 	for i,sym in ipairs(self) do
-		if alphabet[sym] then alphabet[sym](i, sym) end
+		if alphabet[sym] then alphabet[sym]() end
 	end
 end
 -- function Sentence:__tostring()

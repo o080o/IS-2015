@@ -27,6 +27,7 @@ function Lsystem:step(n)
 		i=i+1
 	end
 	self.sentence = sentence -- should not be necessary as rule:apply modifies sentence in place
+	print(self.sentence)
 	return self:step(n-1)
 end
 
