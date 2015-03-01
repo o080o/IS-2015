@@ -94,6 +94,7 @@ function ParSentence:__init(...)
 	self.parameters = {}
 end
 function ParSentence:read(alphabet)
+	local params = self.parameters
 	for i,sym in ipairs(self) do
 		if alphabet[sym] then alphabet[sym](params[i]) end
 	end
@@ -111,19 +112,27 @@ end
 local Rule = o.class()
 lang.Rule = Rule
 
-function Rule:__init(matchPredecessor, buildSuccessor, probability)
+--function Rule:__init(Sentence, Function, Function, Number)
+function Rule:__init(predecessor, matchPredecessor, buildSuccessor, probability)
+	self.predecessor = predecessor
 	self.matchPredecessor = matchPredecessor
 	self.buildSuccessor = buildSuccessor
 	self.probability = probability
 end
 function Rule:apply(sentence, pos)
-	if lang.print and self.matchPredecessor(sentence, pos) > 0 then
+	if self.matchPredecessor(sentence, pos) > 0 then
 		print(self , "in: ["..pos.."]",  sentence)
 	end
 	return self.buildSuccessor( self.matchPredecessor( sentence, pos) )
 end
 function Rule:__tostring()
 	s = {}
+	table.insert(s,"(")
+	for _,sym in ipairs(self.predecessor) do
+		table.insert(s, tostring(sym) )
+		table.insert(s, ",")
+	end
+	table.insert(s,")  ")
 	table.insert(s, tostring( self.matchPredecessor ) )
 	table.insert(s, " -> ")
 	if self.probability then 
@@ -148,17 +157,21 @@ lang.PPredecessor = o.class(Function)
 function lang.PPredecessor:__init(terminals)
 	self.terminals = terminals
 	self.call =  function(sentence, pos)
-		local n, parameters 
-		parameters = {}
+		local n, parameters = 0, {}
 		for i=1,#terminals do
 			if sentence[pos+i-1] == terminals[i].sym then
-				n=(n or 0)+1
+				n=n+1
 				for j,varname in ipairs(terminals[i].parameters) do
 					if sentence.parameters and sentence.parameters[pos+i-1] then
 						parameters[varname] = sentence.parameters[pos+i-1][j]
+						assert(parameters[varname], "unable to math all parameters in rule:")
+					else
+						error("sentence has no parameters to match")
 					end
 					-- A(x,y) ==> {x= A.param[1], y= A.param[2]}
 				end
+			else
+				return 0
 			end
 		end
 		return n, parameters
@@ -183,6 +196,7 @@ lang.PSuccessor = o.class(Function)
 function lang.PSuccessor:__init(terminals)
 	self.terminals = terminals -- save for tostring function
 	self.call = function(n, parameters)
+		if not n or n<=0 then return  end
 		parameters = parameters or {}
 		local newSentence = ParSentence()
 		local newParameters = newSentence.parameters

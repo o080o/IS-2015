@@ -23,8 +23,12 @@ local arithexp = lpeg.P({ expression,
 })
 
 
-arith.expression = arithexp / "vars.%0"
---arith.expression = lpeg.C(arithexp)
+--arith.expression = arithexp / "vars.%0"
+local function varreplace( str )
+	str = str:gsub( "([a-zA-Z][a-zA-Z0-9]*)", "vars.%1")
+	return str
+end
+arith.expression = arithexp / varreplace
 
 function read(fname)
 	local f = io.open(fname)

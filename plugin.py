@@ -42,37 +42,46 @@ def moveTurtle(turtleState, distance):
 def rotateTurtle( turtleState, axis, angle):
     turtleState[1] = turtleState[1] * mathutils.Quaternion( axis, angle)
 
-def draw():
-    moveTurtle(turtleState, turtleState[3]/2)
+def draw(step=None, width=None)
+    if step is None:
+        step = turtleState[3]/2
+    if width is None:
+        width = turtleState[2]
+
+    moveTurtle(turtleState, step)
     bpy.ops.mesh.primitive_cylinder_add()
     segment = bpy.context.object
     pos = turtleState[0] # a vector
     rot = turtleState[1] # a quaternion
-    segment.scale = [ turtleState[2], turtleState[2], turtleState[3]/2 ]
+    segment.scale = [ width, width, step)
     segment.location = [ pos[0], pos[1], pos[2] ]
     segment.rotation_mode = "QUATERNION"
     segment.rotation_quaternion = rot.copy()
+    moveTurtle(turtleState, step)
 
-    moveTurtle(turtleState, turtleState[3]/2)
-def step():
-    moveTurtle(turtleState, turtleState[3])
-def turnL():
-    rotateTurtle( turtleState, mathutils.Vector([0,-1,0]), turtleState[4] )
-def turnR():
-    rotateTurtle( turtleState, mathutils.Vector([0,1,0]), turtleState[4] )
-def pitchU():
-    rotateTurtle( turtleState, mathutils.Vector([1,0,0]), turtleState[4] )
-def pitchD():
-    rotateTurtle( turtleState, mathutils.Vector([-1,0,0]), turtleState[4] )
-def rollL():
-    rotateTurtle( turtleState, mathutils.Vector([0,0,-1]), turtleState[4] )
-def rollR():
-    rotateTurtle( turtleState, mathutils.Vector([0,0,1]), turtleState[4] )
+def step(step=None):
+    if step is None:
+        step = turtleState[3]
+    moveTurtle(turtleState, step)
+def turnL(theta=turnAngle):
+    rotateTurtle( turtleState, mathutils.Vector([0,-1,0]), radians(theta))
+def turnR(theta=turnAngle):
+    rotateTurtle( turtleState, mathutils.Vector([0,1,0]), radians(theta))
+def pitchU(theta=turnAngle):
+    rotateTurtle( turtleState, mathutils.Vector([1,0,0]), radians(theta))
+def pitchD(theta=turnAngle):
+    rotateTurtle( turtleState, mathutils.Vector([-1,0,0]), radians(theta))
+def rollL(theta=turnAngle):
+    rotateTurtle( turtleState, mathutils.Vector([0,0,-1]), radians(theta))
+def rollR(theta=turnAngle):
+    rotateTurtle( turtleState, mathutils.Vector([0,0,1]), radians(theta))
 def turn180():
     rotateTurtle( turtleState, mathutils.Vector([0,1,0]), radians(180) )
 
-def shrink():
-    turtleState[2] = turtleState[2] * turtleState[5]
+def shrink(factor=None):
+    if factor is None:
+        factor = turtleState[5]
+    turtleState[2] = turtleState[2] * factor
 
 def push():
     copy = []
@@ -112,17 +121,40 @@ turtle["["]=push
 turtle["]"]=pop
 turtle["!"]=shrink
 
-turtle["L"] = duplicate( "leaf" )
-turtle["leaf"] = duplicate( "leaf2" )
-turtle["flower"] = duplicate( "flower" )
+
+def duplication(table, key):
+    try:
+        obj = bpy.data.objects[key]
+        val = duplicate(key)
+        table[key] = val
+        return val
+    except KeyError:
+        return None
+
+
+turtlemt = lua.eval("{}") # make a new lua table
+turtlemt.__index = duplication
+
+#setmetatable = lua.eval("function(t,mt) return setmetatable(t,mt) end")
+#setmetatable(turtle, turtlemt)
+
+#turtle["L"] = duplicate( "leaf" )
+#turtle["leaf"] = duplicate( "leaf2" )
+#turtle["flower"] = duplicate( "flower" )
 
 
 #for n in range(10):
     #draw()
     #turnL()
 
-systems = lua.require("ABOP_grammars")
-sentence = systems.fig1_25.step( systems.fig1_25, 6)
+parser = lua.require("parser")
+def load(fname):
+    system = parser.parseFile("tree.txt")
+    
+
+
+
+sentence = system.step(system, 5 )
 sentence.read(sentence, turtle) # no ':' operator in python, and self is not passed automatically
 
 #sentence = systems.fig1_26.step( systems.fig1_26, 4)
