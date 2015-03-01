@@ -30,12 +30,4 @@ local function varreplace( str )
 end
 arith.expression = arithexp / varreplace
 
-function read(fname)
-	local f = io.open(fname)
-	local content = f:read("*all")
-	f:close()
-	return content
-end
-print( lpeg.match(arith.expression, read("ArithTest.txt") ))
-
 return arith

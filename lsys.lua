@@ -34,12 +34,12 @@ function Lsystem:step(n)
 		if not matched then -- apply the identity rule instead
 			table.insert(newSentence, sym)
 			-- quick hack to copy parameters in parametric sentences
-			if self.sentence.parameters and self.sentence.parameters[i] then newSentence.parameters[i] = self.sentence.parameters[i] end
+			if self.sentence.parameters and self.sentence.parameters[i] then newSentence.parameters[#newSentence] = self.sentence.parameters[i] end
 			i=i+1
 		end
 	end
 	self.sentence = newSentence
-	if Lsystem.print then print(self.sentence) end
+	if self.print then print("Step ", n, self.sentence) end
 	return self:step(n-1)
 end
 

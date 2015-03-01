@@ -96,17 +96,28 @@ end
 function ParSentence:read(alphabet)
 	local params = self.parameters
 	for i,sym in ipairs(self) do
-		if alphabet[sym] then alphabet[sym](params[i]) end
+		if params[i] then
+			if unpack then -- test for lua 5.1/5.2 versions
+				if alphabet[sym] then alphabet[sym](unpack(params[i])) end
+			else
+				if alphabet[sym] then alphabet[sym](table.unpack(params[i])) end
+			end
+		else
+			if alphabet[sym] then alphabet[sym]() end
+		end
 	end
 end
 function ParSentence:append( sentence )  
 	local len = #self
-	for _, sym in ipairs(sentence) do
+	for i, sym in ipairs(sentence) do
 		table.insert( self, sym)
+		if sentence.parameters then
+			self.parameters[#self] = sentence.parameters[i]
+		end
 	end
-	for pos, par in pairs(sentence.parameters) do
-		self.parameters[pos + len] = par
-	end
+	--for pos, par in pairs(sentence.parameters) do
+		--self.parameters[pos + len] = par
+	--end
 end
 
 local Rule = o.class()
@@ -120,8 +131,10 @@ function Rule:__init(predecessor, matchPredecessor, buildSuccessor, probability)
 	self.probability = probability
 end
 function Rule:apply(sentence, pos)
-	if self.matchPredecessor(sentence, pos) > 0 then
-		print(self , "in: ["..pos.."]",  sentence)
+	if lang.print and self.matchPredecessor(sentence, pos) > 0 then
+		local n, newSentence = self.buildSuccessor( self.matchPredecessor(sentence, pos) )
+		print(self , "in: ["..pos..","..n.."]",  sentence)
+		print("", "|-", newSentence)
 	end
 	return self.buildSuccessor( self.matchPredecessor( sentence, pos) )
 end
@@ -164,7 +177,11 @@ function lang.PPredecessor:__init(terminals)
 				for j,varname in ipairs(terminals[i].parameters) do
 					if sentence.parameters and sentence.parameters[pos+i-1] then
 						parameters[varname] = sentence.parameters[pos+i-1][j]
-						assert(parameters[varname], "unable to math all parameters in rule:")
+						if not parameters[varname] then
+							print("::", terminals[i].sym, varname)
+							print("unable to match all parameters")
+							return 0
+						end
 					else
 						error("sentence has no parameters to match")
 					end

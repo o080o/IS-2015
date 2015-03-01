@@ -42,7 +42,7 @@ def moveTurtle(turtleState, distance):
 def rotateTurtle( turtleState, axis, angle):
     turtleState[1] = turtleState[1] * mathutils.Quaternion( axis, angle)
 
-def draw(step=None, width=None)
+def draw(step=None, width=None):
     if step is None:
         step = turtleState[3]/2
     if width is None:
@@ -53,7 +53,7 @@ def draw(step=None, width=None)
     segment = bpy.context.object
     pos = turtleState[0] # a vector
     rot = turtleState[1] # a quaternion
-    segment.scale = [ width, width, step)
+    segment.scale = [ width, width, step]
     segment.location = [ pos[0], pos[1], pos[2] ]
     segment.rotation_mode = "QUATERNION"
     segment.rotation_quaternion = rot.copy()
@@ -63,7 +63,7 @@ def step(step=None):
     if step is None:
         step = turtleState[3]
     moveTurtle(turtleState, step)
-def turnL(theta=turnAngle):
+def turnL(theta=turnAngle, *args):
     rotateTurtle( turtleState, mathutils.Vector([0,-1,0]), radians(theta))
 def turnR(theta=turnAngle):
     rotateTurtle( turtleState, mathutils.Vector([0,1,0]), radians(theta))
@@ -148,13 +148,11 @@ turtlemt.__index = duplication
     #turnL()
 
 parser = lua.require("parser")
-def load(fname):
-    system = parser.parseFile("tree.txt")
     
 
+system = parser.parseFile("/home/o080o/Code/IS-2015/flower.txt")
 
-
-sentence = system.step(system, 5 )
+sentence = system.step(system, 50 )
 sentence.read(sentence, turtle) # no ':' operator in python, and self is not passed automatically
 
 #sentence = systems.fig1_26.step( systems.fig1_26, 4)

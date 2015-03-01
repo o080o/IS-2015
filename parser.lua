@@ -68,15 +68,19 @@ local function parsePExpr( pExpr)
 	else
 		local pExprFuncs = {}
 		for _,expr in ipairs(pExpr.args) do
-			local func,err = load("return function(vars) return "..expr..";end")
-			assert(func, err)
-			func = func()
+			local funcStr = "return function(vars) return "..expr..";end"
+			local func
+			if loadstring then
+				func = assert( loadstring(funcStr))()
+			else
+				func = assert( load(funcStr))()
+			end
 			table.insert(pExprFuncs, func)
 		end
 
 		return {sym = pExpr.terminal, calculate = function(params)
 			local newParam = {}
-			for _,func in ipairs(pExprFuncs) do
+			for i,func in ipairs(pExprFuncs) do
 				table.insert(newParam, func(params))
 			end
 			return newParam
@@ -140,7 +144,8 @@ local function parse(input)
 	return system
 end
 local function read(fname)
-	local f = io.open( fname )
+	local f,err = io.open( fname )
+	assert(f,err)
 	local content = f:read("*all")
 	f:close()
 	return content
