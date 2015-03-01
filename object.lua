@@ -30,10 +30,10 @@ function Object.class( parent ,getter, setter)
 		class.super = parent
 		classMt.__index = parent
 	else
-		class.super = class
+		class.super = nil
 		classMt.__index = nil
 	end
-	class.objType = class
+	class.objType = class -- TODO remove this line. (check to make sure nothing uses it)
 
 	local private = {} -- private table that will be closed over in the __newindex and __index function, and not available elsewhere
 	if setter then
@@ -53,6 +53,7 @@ function Object.class( parent ,getter, setter)
 	else
 		objMt.__index = class
 	end
+	objMt.class = class
 
 
 	function classMt.__call(class,...)

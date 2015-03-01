@@ -3,7 +3,7 @@ local lang = require"language"
 
 local Lsystem = obj.class()
 function Lsystem:__init(grammar, axiom)
-	axiom = lang.Sentence(axiom)
+	axiom = axiom
 	self.sentence = axiom
 	self.grammar = grammar
 	self.axiom = axiom
@@ -16,29 +16,30 @@ function Lsystem:step(n)
 	if n < 1 then return self.sentence end
 
 	local sentence = self.sentence
-	local newSentence = lang.Sentence()
+	local newSentence = lang.ParSentence()
 	local i = 1
 	while i<=#sentence do -- allow us to skip over replaced symbols by adjusting i
 		local sym  = sentence[i]
 		local matched = false
-		for _,rule in pairs(self.grammar) do
+		for _,rule in ipairs(self.grammar) do
 			-- test if this rule could be applied here. returns nil if not.
-			local applicable, n, successor = rule:apply(sentence, i)
-			if applicable then
+			local n, successor = rule:apply(sentence, i)
+			if n and n>0 then
 				matched = true
 				i = i + n 
-				for _, s in ipairs(successor) do
-					table.insert( newSentence, s)
-				end
+				newSentence:append(successor)
 				break -- only apply one rule for a certain position
 			end
 		end
 		if not matched then -- apply the identity rule instead
 			table.insert(newSentence, sym)
+			-- quick hack to copy parameters in parametric sentences
+			if self.sentence.parameters and self.sentence.parameters[i] then newSentence.parameters[i] = self.sentence.parameters[i] end
 			i=i+1
 		end
 	end
 	self.sentence = newSentence
+	if Lsystem.print then print(self.sentence) end
 	return self:step(n-1)
 end
 
