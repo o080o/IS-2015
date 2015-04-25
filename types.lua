@@ -1,5 +1,6 @@
 local o = require("object")
 
+
 local LookupTree
 function getEmptyTree(self, key, private)
 	-- use "value" a special value that will *not* be affected by this
