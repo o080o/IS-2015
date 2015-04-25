@@ -23,6 +23,7 @@ function Object.class( parent ,getter, setter)
 	local classMt = {}
 	if parent then
 		-- copy for some performance increase
+		-- also allows METAMETHODS to be inherited!
 		for k,v in pairs(parent) do
 			print("Copy:", k, v)
 			objMt[k] = v

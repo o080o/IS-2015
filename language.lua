@@ -136,6 +136,8 @@ function Rule:apply(sentence, pos)
 		print(self , "in: ["..pos..","..n.."]",  sentence)
 		print("", "|-", newSentence)
 	end
+	print(self)
+	print(self.matchPredecessor)
 	return self.buildSuccessor( self.matchPredecessor( sentence, pos) )
 end
 function Rule:__tostring()

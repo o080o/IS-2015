@@ -4,156 +4,125 @@ from math import radians
 import lupa
 from lupa import LuaRuntime
 
+import sys
+sys.path.append("/home/o080o/Code/IS-2015")
+import turtleInterpreter
+
 lua = LuaRuntime()
 setPath = lua.eval("function (path) package.path = package.path .. ';' .. path .. '?.lua' end")
 setPath("/home/o080o/Code/IS-2015/")
 lsys = lua.require("lsys")
+parser = lua.require("parser")
 alphabet = lua.eval("{}")
 
 turtle = lua.eval("{}") # make a new lua table
 def rotate( quat ): # rotates the turtle
     pass
 
+class LSystem(bpy.types.PropertyGroup):
+    lsystem = bpy.props.StringProperty(subtype="FILE_PATH")
+    iterations = bpy.props.IntProperty()
+bpy.utils.register_class(LSystem)
 
+class LsystemPanel(bpy.types.Panel):
+    bl_label = "L-Systems"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOLS"
 
-lineWidth = .1
-stepSize = 1
-turnAngle = radians(22.5)
-shrinkFactor = .8
+    bpy.types.Object.l_systems = bpy.props.CollectionProperty(type=LSystem)
 
-turtleState = [mathutils.Vector([0,0,0]),mathutils.Quaternion(), lineWidth, stepSize, turnAngle, shrinkFactor]
-turtleState[1].identity()
+    #bpy.types.Object.l_system = bpy.props.StringProperty(subtype="FILE_PATH")
+    #bpy.types.Object.iterations = bpy.props.IntProperty()
 
-stack = []
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text="Row LAbel")
+        split = layout.split()
+        col = layout.column(align=True)
 
-def init():
-    turtleState[0] = mathutils.Vector([0,0,0])
-    turtleState[1] = mathutils.Quaternion()
-    for item in stack:
-        stack.pop()
-def moveTurtle(turtleState, distance):
-    quat = turtleState[1]
-    quat2 = quat.copy()
-    quat2.conjugate()
-    upVector = mathutils.Quaternion( mathutils.Vector([0,0,1]), radians(90))
-    orientation = (quat * upVector * quat2)
-    turtleState[0] = turtleState[0] + (orientation.axis * distance)
+        collection = bpy.context.active_object.l_systems
+        for i in range(0, len( collection )):
+            entry = collection[i]
+            col.prop(entry, "lsystem", text="Rule File")
+            col.prop(entry, "iterations", text="Iterations")
+        #col.prop(bpy.context.active_object, "iterations")
+        col.operator("prop.applysys", text="Regenerate", icon="MESH_MONKEY")
+        col.operator("prop.addsys", text="Add", icon="PLUS")
+        col.operator("prop.removesys", text="Remove", icon="X")
 
-def rotateTurtle( turtleState, axis, angle):
-    turtleState[1] = turtleState[1] * mathutils.Quaternion( axis, angle)
+class AddSystem(bpy.types.Operator):
 
-def draw(step=None, width=None):
-    if step is None:
-        step = turtleState[3]/2
-    if width is None:
-        width = turtleState[2]
+    bl_idname = "prop.addsys"
+    bl_label = "LSystem"
+    @classmethod
+    def poll(self, context):
+        return context.mode == "OBJECT"
 
-    moveTurtle(turtleState, step)
-    bpy.ops.mesh.primitive_cylinder_add()
-    segment = bpy.context.object
-    pos = turtleState[0] # a vector
-    rot = turtleState[1] # a quaternion
-    segment.scale = [ width, width, step]
-    segment.location = [ pos[0], pos[1], pos[2] ]
-    segment.rotation_mode = "QUATERNION"
-    segment.rotation_quaternion = rot.copy()
-    moveTurtle(turtleState, step)
+    def execute(self, context):
+        context.active_object.l_systems.add()
+        return {"FINISHED"}
 
-def step(step=None):
-    if step is None:
-        step = turtleState[3]
-    moveTurtle(turtleState, step)
-def turnL(theta=turnAngle, *args):
-    rotateTurtle( turtleState, mathutils.Vector([0,-1,0]), radians(theta))
-def turnR(theta=turnAngle):
-    rotateTurtle( turtleState, mathutils.Vector([0,1,0]), radians(theta))
-def pitchU(theta=turnAngle):
-    rotateTurtle( turtleState, mathutils.Vector([1,0,0]), radians(theta))
-def pitchD(theta=turnAngle):
-    rotateTurtle( turtleState, mathutils.Vector([-1,0,0]), radians(theta))
-def rollL(theta=turnAngle):
-    rotateTurtle( turtleState, mathutils.Vector([0,0,-1]), radians(theta))
-def rollR(theta=turnAngle):
-    rotateTurtle( turtleState, mathutils.Vector([0,0,1]), radians(theta))
-def turn180():
-    rotateTurtle( turtleState, mathutils.Vector([0,1,0]), radians(180) )
+class RemoveSystem(bpy.types.Operator):
+    bl_idname = "prop.removesys"
+    bl_label = "LSystem"
 
-def shrink(factor=None):
-    if factor is None:
-        factor = turtleState[5]
-    turtleState[2] = turtleState[2] * factor
+    @classmethod
+    def poll(self, context):
+        return context.mode == "OBJECT"
+    def execute(self, context):
+        collection = context.active_object.l_systems
+        collection.remove( len(collection)-1 )
+        return {"FINISHED"}
 
-def push():
-    copy = []
-    for i in range( len( turtleState ) ):
-        copy.append( turtleState[i] )
-    stack.append(copy)
-def pop():
-    copy = stack.pop()
-    for i, val in enumerate( copy ):
-        turtleState[i] = val
+class ApplySystem(bpy.types.Operator):
+    bl_idname = "prop.applysys"
+    bl_label = "LSystem"
+    #bl_options = {"REGISTER", "UNDO"}
 
-def duplicate( name ):
-    def f():
-        original = bpy.data.objects[name]
-        bpy.ops.object.select_all(action="DESELECT")
-        original.select = True
-        bpy.context.scene.objects.active = original
-        bpy.ops.object.duplicate(linked=True)
-        new = bpy.context.object
-        pos = turtleState[0] # a vector
-        rot = turtleState[1] # a quaternion
-        new.location = [ pos[0], pos[1], pos[2] ]
-        new.rotation_mode = "QUATERNION"
-        new.rotation_quaternion = rot.copy()
-    return f
+    @classmethod
+    def poll(self, context):
+        return context.mode == "OBJECT"
 
-turtle["F"]=draw
-turtle["f"]=step
-turtle["+"]=turnL
-turtle["-"]=turnR
-turtle["&"]=pitchU
-turtle["^"]=pitchD
-turtle["\\"]=rollL
-turtle["/"]=rollR
-turtle["|"]=turn180
-turtle["["]=push
-turtle["]"]=pop
-turtle["!"]=shrink
+    def execute(self, context):
+        print("Executing...")
+        pos = context.active_object.location
+        context.active_object.rotation_mode="QUATERNION"
+        rot = context.active_object.rotation_quaternion
 
-
-def duplication(table, key):
-    try:
-        obj = bpy.data.objects[key]
-        val = duplicate(key)
-        table[key] = val
-        return val
-    except KeyError:
-        return None
-
-
-turtlemt = lua.eval("{}") # make a new lua table
-turtlemt.__index = duplication
-
-#setmetatable = lua.eval("function(t,mt) return setmetatable(t,mt) end")
-#setmetatable(turtle, turtlemt)
-
-#turtle["L"] = duplicate( "leaf" )
-#turtle["leaf"] = duplicate( "leaf2" )
-#turtle["flower"] = duplicate( "flower" )
-
-
-#for n in range(10):
-    #draw()
-    #turnL()
-
-parser = lua.require("parser")
     
+        turtle = turtleInterpreter.Turtle(lua, pos[0], pos[1], pos[2], rot)
 
-system = parser.parseFile("/home/o080o/Code/IS-2015/flower.txt")
+        collection = context.active_object.l_systems
+        sentence = None
+        for i in range( 0, len( collection) ):
+            entry = collection[i]
+            fname = entry.lsystem
+            itr = entry.iterations
+            print("working...")
+            system = parser.parseFile(fname)
+            if sentence is not None:
+                system.sentence = sentence
+            sentence = system.step(system, itr )
 
-sentence = system.step(system, 50 )
-sentence.read(sentence, turtle) # no ':' operator in python, and self is not passed automatically
+        turtle.interpreter.init()
+        sentence.read(sentence, turtle.interpreter) # no ':' operator in python, and self is not passed automatically
+        turtle.interpreter.finalize()
+        bpy.ops.object.join()
 
-#sentence = systems.fig1_26.step( systems.fig1_26, 4)
-#sentence.read(sentence, turtle) # no ':' operator in python, and self is not passed automatically
+        print("Done")
+        return {"FINISHED"}
+
+def register():
+    bpy.utils.register_class(LsystemPanel)
+    bpy.utils.register_class(ApplySystem)
+    bpy.utils.register_class(AddSystem)
+    bpy.utils.register_class(RemoveSystem)
+def unregister():
+    bpy.utils.unregister_class(LSystem)
+    bpy.utils.unregister_class(LsystemPanel)
+    bpy.utils.unregister_class(ApplySystem)
+    bpy.utils.unregister_class(AddSystem)
+if __name__ == "__main__":
+    register()
+
