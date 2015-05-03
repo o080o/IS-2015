@@ -1,3 +1,4 @@
+
 import bpy
 import mathutils
 from math import radians
@@ -7,6 +8,9 @@ from lupa import LuaRuntime
 import sys
 sys.path.append("/home/o080o/Code/IS-2015")
 import turtleInterpreter
+import imp
+
+imp.reload(turtleInterpreter) #force a reload, otherwise blender uses a cached copy
 
 lua = LuaRuntime()
 setPath = lua.eval("function (path) package.path = package.path .. ';' .. path .. '?.lua' end")

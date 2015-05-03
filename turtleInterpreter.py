@@ -50,17 +50,23 @@ class Turtle():
                 width = turtleState[2]
 
             moveTurtle(turtleState, step)
-            bpy.ops.mesh.primitive_cylinder_add()
-            segment = bpy.context.object
+            original = bpy.data.objects["segment"]
+            bpy.ops.object.select_all(action="DESELECT")
+            original.select = True
+            bpy.context.scene.objects.active = original
+            bpy.ops.object.duplicate(linked=False)
+
+            segment = bpy.context.scene.objects.active
             pos = turtleState[0] # a vector
             rot = turtleState[1] # a quaternion
             segment.scale = [ width, width, step]
             segment.location = [ pos[0], pos[1], pos[2] ]
             segment.rotation_mode = "QUATERNION"
             segment.rotation_quaternion = rot.copy()
+            objects.append(segment)
+
             moveTurtle(turtleState, step)
             #add this object to the selection list
-            objects.append(segment)
 
         def step(step=None):
             if step is None:
