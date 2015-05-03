@@ -4,21 +4,23 @@ lang = require("language")
 lsys = require("lsys")
 
 
+
 local character = lpeg.R("az", "AZ") + lpeg.S("+-[]|/\\")
 local digit = lpeg.R("09")
 local space = lpeg.S(" \t")^0
 local terminal = lpeg.C( character * (character + digit)^0 ) * space  -- captures
+
 local open = lpeg.P("(") * space
 local close = lpeg.P(")") * space
 local dot = lpeg.P(".")
-local eq = lpeg.P("->") * space
+local eq = lpeg.P("=>") * space
 local nextline = lpeg.S("\n")
 local newline = lpeg.P("\n")
 
 
 local number = (( digit^-1 * dot * digit^1) + digit^1) / tonumber -- captures
 local probability = open * number * space * close
-local terminalList = lpeg.Ct (terminal ^1)
+local terminalList = lpeg.Ct( terminal^1 )
 
 local var = lpeg.C(character * ( character + digit)^0) * space
 local comma = lpeg.P(",") * space
@@ -56,7 +58,7 @@ local function parseSimpleRule(rule)
 			matchPredecessor = lang.CFPredecessor( predMatch[1] )
 		end
 		local predecessor = predMatch
-		local successor = lang.Successor( rule.Successor )
+		local buildSuccessor = lang.Successor( rule.Successor )
 		return lang.Rule( predecessor, matchPredecessor, buildSuccessor, rule.Probability)
 end
 local function parsePTerminal(pTerm)
@@ -120,13 +122,17 @@ local function parseSentence(s)
 	return sentence
 end
 local function parse(input)
+--local simpleRule = lpeg.Ct( lpeg.Cg(terminalList, "SimplePredecessor") * eq * lpeg.Cg(probability, "Probability")^-1 * lpeg.Cg(terminalList, "Successor") * newline)
+	--local simpleRule = lpeg.Ct( lpeg.Cg(terminalList, "SimplePredecessor") * eq * lpeg.Cg(terminalList, "Successor") * newline )
+
 	local matches = lpeg.match(lsystem, input)
-	assert(matches, "Invalid Syntax")
+	assert(matches, "Invalid Syntax: (no lsystem found)")
 	local rules, stochastic = {}, false
 	local axiom = parseSentence(matches.Axiom)
 	for _,rule in pairs(matches.Rules) do
 		if rule.Probability then stochastic = true end
 		if rule.SimplePredecessor then
+			print("paring simple rule!")
 			table.insert(rules, parseSimpleRule(rule))
 		elseif rule.ParametricPredecessor then
 			table.insert(rules, parsePRule(rule))

@@ -1,9 +1,7 @@
-F(1,.1) apex(0)
-apex(l) -> (.8) apex(l+.1)
-apex(l) -> (.2) F(l/2,.1) [ +(30) F(.5,.05) +(0,1) /(0) latApex(0) ] /(60) F(l/2,.1) apex(0)
-latApex(l) -> (.49) latApex(l+.2)
-+(g,w) /(r) latApex(l) -> (.5) +(g,w) /(r) F(l/2, .1) [ +(20) F(.5,.05) ] F(l/2, .1) /(r*(0-1))  +(g*(0-1),1) +(g,1) /(r+60) latApex(.2)
-latApex(l) -> (.01) F(l,.05)
-+(l,t) +(r,z) -> (1) +(l,t) +(r+5,z)
-F(l,w) -> (1) F(l*1.,w*1.0)
-
+apex
+apex => (.1) + apex
+apex => (.1) - apex
+apex => (.4) F apex
+apex => (.4) bud F apex
+bud => (.1) [ + apex ]
+bud => (.1) [ - apex ]
