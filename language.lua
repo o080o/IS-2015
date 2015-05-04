@@ -124,11 +124,12 @@ local Rule = o.class()
 lang.Rule = Rule
 
 --function Rule:__init(Sentence, Function, Function, Number)
-function Rule:__init(predecessor, matchPredecessor, buildSuccessor, probability)
+function Rule:__init(predecessor, matchPredecessor, buildSuccessor, probability, condition)
 	self.predecessor = predecessor
 	self.matchPredecessor = matchPredecessor
 	self.buildSuccessor = buildSuccessor
 	self.probability = probability
+	self.condition = condition
 end
 function Rule:apply(sentence, pos)
 	if lang.print and self.matchPredecessor(sentence, pos) > 0 then
@@ -136,8 +137,6 @@ function Rule:apply(sentence, pos)
 		print(self , "in: ["..pos..","..n.."]",  sentence)
 		print("", "|-", newSentence)
 	end
-	print(self)
-	print(self.matchPredecessor)
 	return self.buildSuccessor( self.matchPredecessor( sentence, pos) )
 end
 function Rule:__tostring()
@@ -169,8 +168,9 @@ end
 -- return a function to match a parametric predecessor
 --function lang.PPredecessor(terminals)
 lang.PPredecessor = o.class(Function)
-function lang.PPredecessor:__init(terminals)
+function lang.PPredecessor:__init(terminals, condition)
 	self.terminals = terminals
+	self.condition = condition
 	self.call =  function(sentence, pos)
 		local n, parameters = 0, {}
 		for i=1,#terminals do
@@ -180,8 +180,10 @@ function lang.PPredecessor:__init(terminals)
 					if sentence.parameters and sentence.parameters[pos+i-1] then
 						parameters[varname] = sentence.parameters[pos+i-1][j]
 						if not parameters[varname] then
-							print("::", terminals[i].sym, varname)
-							print("unable to match all parameters")
+							if lang.print then
+								print("::", terminals[i].sym, varname)
+								print("unable to match all parameters")
+							end
 							return 0
 						end
 					else
@@ -193,9 +195,14 @@ function lang.PPredecessor:__init(terminals)
 				return 0
 			end
 		end
-		return n, parameters
+		if not condition or condition(parameters) then
+			return n, parameters
+		else 
+			return 0
+		end
 	end
 end
+
 function lang.PPredecessor:__tostring()
 	local s = {}
 	for _,term in ipairs(self.terminals) do
@@ -515,11 +522,11 @@ local StochasticGrammar = o.class(Grammar)
 lang.StochasticGrammar = StochasticGrammar
 
 function StochasticGrammar:__init(rules)
-	buckets = self:bucketize(rules)
+	local buckets = self:bucketize(rules)
 	for _,bucket in pairs(buckets) do
+		bucket:normalize()
 		table.insert(self, bucket)
 	end
-	self:normalize()
 end
 
 --data Bucket = [Rule]
@@ -534,16 +541,18 @@ function Bucket:apply(sentence, i)
 	local r = math.random()
 	local sum = 0
 	for _, rule in ipairs(self) do
-		if r <= sum + (rule.probability or 0) then
-			return rule:apply(sentence, i)
-		else
-			sum = sum + (rule.probability or 0)
+		if not rule.probability or r <= sum + (rule.probability) then
+			local n, sentence = rule:apply(sentence, i)
+			if rule.probability or ( n and  n>0 ) then
+				return n, sentence
+			end
 		end
+		sum = sum + (rule.probability or 0)
 	end
-	return false, i, sentence
+	return 0, {}
 end
 --function normalize( Bucket )
--- normalizes the probabilities of all of the rules to add up to 100%. 
+-- normalizes the probabilities of all of the rules to add up to 100%, IF they are GREATER than 100%.
 function Bucket:normalize()
 	-- find the sum...
 	local sum = 0
@@ -551,10 +560,9 @@ function Bucket:normalize()
 		sum = sum + (rule.probability or 0)
 	end
 	factor = 1/sum -- factor to scale each probability
-	if factor > 1 then factor = 1 end
+	if factor > 1 then factor = 1 end -- don't scale up, only down.
 	for _,rule in ipairs(self) do
-		if rule.probability then rule.probability = rule.probability * factor 
-		else rule.probability = 0 end
+		if rule.probability then rule.probability = rule.probability * factor end
 	end
 end
 
@@ -566,7 +574,7 @@ function StochasticGrammar:bucketize(rules)
 	local buckets = {}
 	local testTree = types.LookupTree()
 	local n = 1
-	for _, rule in pairs(rules) do
+	for _, rule in ipairs(rules) do
 		local val = testTree:get(rule.predecessor)
 		if val then
 			table.insert( buckets[val], rule)
@@ -578,13 +586,6 @@ function StochasticGrammar:bucketize(rules)
 		end
 	end
 	return buckets
-end
--- normalize the probability of each bucket in the grammar
-function StochasticGrammar:normalize()
-	-- step 1. make a list for each unique predecessor, then normalize each
-	for _, bucket in pairs(self) do
-		bucket:normalize()
-	end
 end
 
 return lang -- return the module

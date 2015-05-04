@@ -22,12 +22,22 @@ local arithexp = lpeg.P({ expression,
 	factor = var + number + open * expression * close
 })
 
+local test = lpeg.P("<=") + lpeg.P(">=") + lpeg.P("<") + lpeg.P(">") + lpeg.P("==") + lpeg.P("~=")
+local booleanop = lpeg.P("and") + lpeg.P("or")
+local condition = lpeg.P( arithexp * space * test * space * arithexp )
+local compoundCondition = lpeg.P( (1-lpeg.S("{}"))^0 )
 
 --arith.expression = arithexp / "vars.%0"
 local function varreplace( str )
 	str = str:gsub( "([a-zA-Z][a-zA-Z0-9]*)", "vars.%1")
 	return str
 end
+
 arith.expression = arithexp / varreplace
+arith.condition = compoundCondition / varreplace
+
+
+local test = lpeg.match( arith.condition, "x < 5*3+y and q < y")
+print(test)
 
 return arith

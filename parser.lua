@@ -12,6 +12,8 @@ local terminal = lpeg.C( character * (character + digit)^0 ) * space  -- capture
 
 local open = lpeg.P("(") * space
 local close = lpeg.P(")") * space
+local curlyOpen = lpeg.P("{") * space
+local curlyClose = lpeg.P("}") * space
 local dot = lpeg.P(".")
 local eq = lpeg.P("=>") * space
 local nextline = lpeg.S("\n")
@@ -36,18 +38,30 @@ local pExpression = lpeg.Ct( lpeg.Cg(terminal, "terminal") * lpeg.Cg(argExpr, "a
 local pExpressionList = lpeg.Ct( (pExpression + terminal)^1 )
 
 
+local condition = curlyOpen * (arithmetic.condition) * space * curlyClose
+
 
 -- A B A -> A B
-local simpleRule = lpeg.Ct( lpeg.Cg(terminalList, "SimplePredecessor") * eq * lpeg.Cg(probability, "Probability")^-1 * lpeg.Cg(terminalList, "Successor") * newline)
+local predecessor = lpeg.Cg(pTerminalList, "ParametricPredecessor") + lpeg.Cg(terminalList, "SimplePredecessor")
+local successor = lpeg.Cg(pExpressionList, "ParametricSuccessor") + lpeg.Cg(terminalList, "SimpleSuccessor")
+--local predecessor = lpeg.Cg(terminalList, "SimplePredecessor")
+--local successor = lpeg.Cg(terminalList, "SimpleSuccessor")
+local prob = lpeg.Cg(probability, "Probability")^-1
+local cond = lpeg.Cg(condition, "Condition")^-1
+local rule= lpeg.Ct(  predecessor * cond * space * eq * prob * successor * newline)
+
+local simpleRule= lpeg.Ct( lpeg.Cg(terminalList, "SimplePredecessor" ) * eq * lpeg.Cg(probability, "Probability")^-1 * lpeg.Cg(terminalList, "Successor") * newline)
 local pRule = lpeg.Ct( lpeg.Cg(pTerminalList, "ParametricPredecessor") * eq * lpeg.Cg(probability, "Probability")^-1 * lpeg.Cg(pExpressionList, "Successor") * newline)
-local flRule
+--local flRule
 -- A(x,y) B(z,q) -> (.5) F(x,y) B(z,q+1)
 --local flRule = terminal+ eq [probability] flTerminal+
 
 local sentence = (pExpressionList + terminalList) * newline
-local rule = pRule + simpleRule
+--local rule = pRule + simpleRule
+--local rule = simpleRule
 
 local lsystem = lpeg.Ct( lpeg.Cg( sentence, "Axiom") * lpeg.Cg(lpeg.Ct( rule ^ 1 ),"Rules"))
+
 
 local function parseSimpleRule(rule)
 		local predMatch = rule.SimplePredecessor
@@ -63,6 +77,17 @@ local function parseSimpleRule(rule)
 end
 local function parsePTerminal(pTerm)
 		return {sym=pTerm.terminal, parameters=pTerm.args}
+end
+local function parseCondition( cond )
+	print("Condition:", cond)
+	local funcStr = "return function(vars) return "..cond..";end"
+	local func
+	if loadstring then
+		func = assert( loadstring( funcStr ))()
+	else
+		func = assert( load( funcStr ))()
+	end
+	return func
 end
 local function parsePExpr( pExpr)
 	if type( pExpr) == "string" then
@@ -106,6 +131,39 @@ local function parsePRule(rule)
 	local buildSuccessor = lang.PSuccessor(succTerms)
 	return lang.Rule( predecessor, matchPredecessor, buildSuccessor, rule.Probability)
 end
+
+local function parseParametricPredecessor(predecessor, condition)
+	local predTerms = {}
+	local predecessor2 = {}
+	for _, pTerm in ipairs(predecessor) do
+		local term = parsePTerminal(pTerm)
+		table.insert(predTerms, term)
+		table.insert(predecessor2, term.sym)
+		-- add all variables to a table to use when parsing PExpressions
+	end
+	return lang.PPredecessor(predTerms, condition), predecessor2
+end
+local function parseParametricSuccessor(successor)
+	succTerms = {}
+	for _, pExpr in ipairs(successor) do
+		table.insert(succTerms, parsePExpr(pExpr))
+	end
+	return lang.PSuccessor(succTerms)
+end
+local function parseSimpleSuccessor(successor)
+	return lang.Successor( successor )
+end
+local function parseSimplePredecessor(predecessor)
+	local  matchPredecessor
+	if #predecessor > 1 then
+		matchPredecessor = lang.Predecessor( predecessor )
+	else
+		matchPredecessor = lang.CFPredecessor( predecessor[1] )
+	end
+	return matchPredecessor, predecessor
+end
+
+-- used to parse axiom sentence
 local function parseSentence(s)
 	local sentence = lang.ParSentence()
 	for i, sym in ipairs(s) do
@@ -130,14 +188,30 @@ local function parse(input)
 	local rules, stochastic = {}, false
 	local axiom = parseSentence(matches.Axiom)
 	for _,rule in pairs(matches.Rules) do
+		local matchPredecessor, buildSuccessor, condition
+
 		if rule.Probability then stochastic = true end
+		if rule.Condition then condition = parseCondition( rule.Condition ) end
+
 		if rule.SimplePredecessor then
-			print("paring simple rule!")
-			table.insert(rules, parseSimpleRule(rule))
+			matchPredecessor, predecessor = parseSimplePredecessor( rule.SimplePredecessor )
 		elseif rule.ParametricPredecessor then
-			table.insert(rules, parsePRule(rule))
-		else error("unknown kind of rule was matched?") end
-		print("Rule:", rules[#rules])
+			matchPredecessor, predecessor = parseParametricPredecessor( rule.ParametricPredecessor, condition )
+		else
+			error("unknown type of rule was matched?")
+		end
+
+		if rule.SimpleSuccessor then
+			buildSuccessor = parseSimpleSuccessor( rule.SimpleSuccessor )
+		elseif rule.ParametricSuccessor then
+			buildSuccessor = parseParametricSuccessor( rule.ParametricSuccessor )
+		else
+			error("unknown type of rule was matched?")
+		end
+		
+		local newRule = lang.Rule( predecessor, matchPredecessor, buildSuccessor, rule.Probability, condition)
+		table.insert( rules, newRule )
+		print("Rule:", newRule)
 	end
 	local grammar 
 	if stochastic then

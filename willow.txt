@@ -1,7 +1,8 @@
-apex
-apex => (.1) + apex
-apex => (.1) - apex
-apex => (.4) F apex
-apex => (.4) bud F apex
-bud => (.1) [ + apex ]
-bud => (.1) [ - apex ]
+F(1) apex(1,1)
+apex(x,l) => (.75) apex(x+.1,l+.1)
+apex(x,l) => (.1) F(x) + apex(.1,l+.1)
+apex(x,l) => (.1) F(x) - apex(.1,l+.1)
+apex(x,l) => (.05) {l>.5} F(x) [ + bud(.1) ] - bud(.1)
+bud(x) => (.5) + apex(.1, .1)
+bud(x) => (.5) - apex(.1, .1)
+

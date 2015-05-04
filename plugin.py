@@ -34,6 +34,8 @@ class LsystemPanel(bpy.types.Panel):
     bl_region_type = "TOOLS"
 
     bpy.types.Object.l_systems = bpy.props.CollectionProperty(type=LSystem)
+    bpy.types.Object.turtle_angle = bpy.props.FloatProperty(default=12)
+    bpy.types.Object.turtle_step = bpy.props.FloatProperty(default=1)
 
     #bpy.types.Object.l_system = bpy.props.StringProperty(subtype="FILE_PATH")
     #bpy.types.Object.iterations = bpy.props.IntProperty()
@@ -45,6 +47,7 @@ class LsystemPanel(bpy.types.Panel):
         split = layout.split()
         col = layout.column(align=True)
 
+        obj = bpy.context.active_object
         collection = bpy.context.active_object.l_systems
         for i in range(0, len( collection )):
             entry = collection[i]
@@ -54,6 +57,8 @@ class LsystemPanel(bpy.types.Panel):
         col.operator("prop.applysys", text="Regenerate", icon="MESH_MONKEY")
         col.operator("prop.addsys", text="Add", icon="PLUS")
         col.operator("prop.removesys", text="Remove", icon="X")
+        col.prop(obj, "turtle_angle", text="Angle")
+        col.prop(obj, "turtle_step", text="Step Size")
 
 class AddSystem(bpy.types.Operator):
 
@@ -94,8 +99,10 @@ class ApplySystem(bpy.types.Operator):
         context.active_object.rotation_mode="QUATERNION"
         rot = context.active_object.rotation_quaternion
 
-    
-        turtle = turtleInterpreter.Turtle(lua, pos[0], pos[1], pos[2], rot)
+        angle = context.active_object.turtle_angle
+        step = context.active_object.turtle_step
+
+        turtle = turtleInterpreter.Turtle(lua, pos[0], pos[1], pos[2], rot, turnAngle=angle, stepSize=step)
 
         collection = context.active_object.l_systems
         sentence = None
@@ -103,8 +110,10 @@ class ApplySystem(bpy.types.Operator):
             entry = collection[i]
             fname = entry.lsystem
             itr = entry.iterations
-            print("working...")
+            print("parsing...")
             system = parser.parseFile(fname)
+            print("done.")
+            print("working...")
             if sentence is not None:
                 system.sentence = sentence
             sentence = system.step(system, itr )
